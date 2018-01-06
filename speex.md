@@ -182,7 +182,12 @@ LOCAL_CFLAGS = -DFIXED_POINT -DUSE_KISS_FFT -DEXPORT="" -UHAVE_CONFIG_H
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/include // 指定speex的include目录地址，如果你拷贝的include 目录位置不同位置，需要在此修改。
 
 
-# 这些是自己编写的c文件和libspeex和libspeexdsp目录下要编译链接的c文件，如果你发现哪个文件找不到，如果你下载的版本的sppex有这个文件，就应该在这里添加上，如果没有，就应该删掉
+# 这些是自己编写的c文件和libspeex和libspeexdsp目录下要编译链接的c文件，如果
+# 你发现哪个文件找不到，如果你下载的版本的sppex有这个文件，就应该在这里添加上，
+# 如果没有，就应该在此处删掉多余的。或者你只使用了一个压缩的，那就根本不需要指定
+# 降噪的文件。
+# 
+# 注意，你自己编写的c 文件也要加, 中间不要加空行，你懂得
 LOCAL_SRC_FILES :=\
 libspeex/bits.c \
 libspeex/cb_search.c \
@@ -233,6 +238,49 @@ LOCAL_LDLIBS := -llog -lz
 
 include $(BUILD_SHARED_LIBRARY)
 ```
-    
+
+
+#### 编写Java native 方法
+
+将你要调用so库中方法 的java声明成native 方法。例如：
+
+```java
+public class Speex {
+
+
+        // 这里需要注意，我在网上看到的so库的名字叫libspeex，这里就写libspeex
+        // 但是，我在写的时候报错，提示的是找不到liblibspeex，当然找不到
+        // 我之前写的生成的库名字是libspeex，不知道为什么自动给我添加了一个lib 字段。
+        // 所以这里自然是去掉一个lib了。
+        // 这里不一定写成静态代码块，
+	static {
+		System.loadLibrary("speex");
+	}
+
+
+	public native int cancelNoiseInit(int frame_size,int sample_rate);
+	public native int cancelNoisePreprocess(byte[] inbuffer, int length);
+	public native int cancelNoiseDestroy();
+
+	public native int encode(String pcmFile, String speexFile);
+	public native int decode(String speexFile,String pcmFile);
+
+	public native int en(String pcmFile, String speexFile);
+	public native int de(String speexFile,String pcmFile);
+
+    public void close() {
+    }
+
+	public native int encodeArray(short[] buffer, int n, byte[] encoded);
+
+	public native int decodeArray(byte[] codeBuffer, int n, short[] buffer);
+
+	public void cancelNoiseInit() {
+		cancelNoiseInit(AudioRecorderRunnable.FRAME_SIZE, AudioRecorderRunnable.SAMPLE_RATE);
+	}
+}
+```
+
+
 
 
