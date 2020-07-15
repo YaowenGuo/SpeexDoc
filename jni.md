@@ -124,7 +124,7 @@ JNIEXPORT jint JNICALL Java_test_TestJni_displayHelloWorld(JNIEnv * env, jobject
 jni.h是定义了很多我们使用的JNI函数和结构体，jint是JNI定义的数据类型，因为Java层和C/C++的数据类型或者对象不能直接相互的引用或者使用，JNI层定义了自己的数据类型，用于衔接Java层和JNI层，至于这些数据类型我们在后面介绍。这里的jint对应Java的int数据类型，该函数返回的int表示当前使用的JNI的版本，其实类似于Android系统的API版本一样，不同的JNI版本中定义的一些不同的JNI函数。该函数会有两个参数，其中 `*jvm` 为 `Java` 虚拟机实例，`JavaVM` 结构体定义了以下函数：
 
 
-### 编译 C/C++ 为动态链接库
+#### 编译 C/C++ 为动态链接库
 
 so动态链接库，so文件是linux下的c/c++动态链接库。Java虚拟机会在运行时动态加载so库，并运行。
 
@@ -158,7 +158,7 @@ gcc -I $JAVA_HOME/include -I $JAVA_HOME/include/linux HelloWorld.c -fPIC -shared
 
 ```
 
-###＃　编译运行　Java 代码
+####　编译运行　Java 代码
 
 编译并没有什么特别
 
