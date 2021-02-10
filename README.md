@@ -1,11 +1,12 @@
 ### 项目目录说明
 
-这是是该项目 speex 编解码的使用说明。如果对jni还不熟悉，可以查看[JNI编程基础](/jni.md)， 如果想要对项目进行改造，请查看[Speex在Android中使用](/speex.md)。
+这是 speex 编解码的使用说明。如果对jni还不熟悉，可以查看[JNI编程基础](https://github.com/YaowenGuo/AndroidQA/blob/master/Android/jni/jni.md)， 如果想要对项目进行改造，请查看[Speex在Android中使用](/speex.md)。
 
 C 库， speex 的编解码，降噪和去回声都在jni目录下。还有自己编写的函数，使用时将其拷贝到app/src/main目录下
 
 > jni 结构
 
+```
 jni 该目录是android studio 的c程序根目录
  |- include 包libspeex编解码,libspeexdsp降噪和去回声的头文件被合并在此
  |- libspeex 编解码的库
@@ -15,85 +16,100 @@ jni 该目录是android studio 的c程序根目录
  |- speex_util.h 使用javah 指令生成的头文件，每次改动java native方法都要从新生成，同时拷贝到它的实现文件。
  |- speex_util.c 自己对speex的封装
  |- srocess_set.h 自己编写c库内部要用到的声明。
-
-复制了代码之后还是不能够使用，因为还没有编译，首先配置编译指令：
-
-### 确保Android studio 配置了 NDK，
-
-点击SDK Manger -&gt; SDK Tools -&gt; NDK -&gt; 点击Apply
-
-![](/assets/2137700-1f9dcaa58e35a815.png)
-
-并且在项目的 gradle.properties 中添加一行 android.useDeprecatedNdk=true。不过我发现我没有配置也是可以使用的。  
-![](/assets/2137700-b9d0627b27a7ba9e.png)
-
-如果你是自己下载的NDK包解压的 你还需在local.properties 中添加NDK位置  
-ndk.dir=/Users/yaowen/Library/Android/sdk/ndk-bundle
-
-### 配置生成apk时链接的so库位置
-在 Module的 gradle中添加如下内容：
-
 ```
+
+有一些博客上使用配置 `Externel Tools` 的方式，这种方式比较老旧了。如果你对其看兴趣，可[查看](externel_tools_config.md)。这里使用新的方式配置编译 native 代码。
+
+### 配置 Gradle 编译代码。
+
+如果是在已有项目中添加 Native，课直接跳过第一步。
+
+1. 如果是新建项目，选择新建 C++ 项目可以默认添加 Native 的编译。
+
+![Create project with native build config](assets/create_project_with_native_config.png)
+
+
+就回在 app 的 `build.gralde`  发现配置 Native 编译的 gradle 配置。
+
+```groovy
 android {
-    ...
+
     defaultConfig {
         ...
-        ndk {
-            moduleName "libspeex"  // 指定连接时 c 动态链接库的名字
-            // 指定链接哪些架构的库，会根据用于不同架构的apk链接不同的类型
-            abiFilters 'armeabi','arm64-v8a', 'x86', 'armeabi-v7a'
+        externalNativeBuild {
+            cmake {
+                cppFlags ""
+            }
         }
-        sourceSets.main {
-            jni.srcDirs = []
-            // 指定so库的位置，用于生成apk时链接时进apk，这里指定了两个。
-            jniLibs.srcDirs = ['src/main/jniLibs', 'src/main/libs']
+    }
 
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt" // CMake 文件目录
+            version "3.10.2" // CMake 版本。
+        }
+    }
+}
+
+```
+
+
+2. 然而大多数情况下，是在已有项目的添加 Native 编译
+
+这时候在左侧项目栏中鼠标右键要添加 Native 配置的模块，在弹出的菜单中选择 `Link C++ Project with Gradle`。此时回弹出一个弹窗，选择该模块中 Native 编译的 `Android.mk` 或者 `CMakeLists.txt`。 Gradle 会根据文件自动生成 `ndkBuild` 或者 CMake 的 gradle 配置。
+
+
+如果是 `Android.mk` 则会在该模块的 `build.gradle` 文件中生成：
+
+```groovy
+android {
+    ndkVersion '21.3.6528147' // 自己诶外添加的，课制定 ndk 的版本。
+    externalNativeBuild {
+        ndkBuild {
+            path file('src/main/jni/Android.mk')
         }
     }
 }
 ```
 
-### 配置编译so库
+制定生成的 abi
 
-Android Studio （菜单栏最左边）-&gt; Preferences \[或者command+,直接打开\]-&gt; Tools -&gt; External Tools -&gt; 点击➕号进行添加：
+```groovy
+android {
+    defaultConfig {
+        ...
+        externalNativeBuild {
+            ndkBuild {
+                buildTypes {
+                    abiFilters 'armeabi-v7a' // 课制定多种 abi
+                }
+            }
+        }
+    }
+}
+```
 
-![](assets/1226849-fc511b1906b58971.png)  
-点击+号之后，打开Macros 配置宏命令界面，如下图：  
-![](assets/1226849-ef87cb38f9355763.png)
+debug 和 release 指定不同的 abi
 
-> javah 指令的配置如下：
+```
+android {
+    defaultConfig {
+        ...
+        externalNativeBuild {
+            ndkBuild {
+                debug {
+                    abiFilters 'armeabi-v7a', 'x86'
+                }
+                release {
+                    abiFilters 'armeabi-v7a'
+                }
+            }
+        }
+    }
+}
+```
 
-Program:  $JDKPath$\bin\javah.exe   
-Parameters: -classpath . -jni -o $ModuleFileDir$/src/main/jni/$Prompt$  $FileClass$   
-Working directory:  $ModuleFileDir$\src\main\java  
-
-![](assets/javah_config.png)
-
-参数有依赖文件的话需要加入依赖库  
--bootclasspath$ModuleSdkPath$/platforms/android-21/android.jar
-
-> build 和 clean 指令的配置如下：
-
-Program: ~/Library/Android/sdk/ndk-bundle/build/ndk-build  
-Parameters: 如果想要强制重新编译: -B 如果想要清理: clean  
-Working dicrectory: $ProjectFileDir$/app/src/main  
-或者   
-Working directory: $ModuleFileDir$\src\main
-
-![](assets/ndk_build_cinfig.png)
-
-![](assets/ndk_clean_config.png)
-
-** 注意，上面的的Program最好打开目录选择，手动输入容易出错**
-
-2.配置完成就可以使用javah 、ndk-build、ndk-build clean这三个命令了，那么在哪里使用这些命令，鼠标点击Moudule中的一个文件，右键就能找到：请看下图
-
-![](assets/1226849-13747f6eedf18067.png)
-
-
-### 编译
-
-鼠标点击Android studio中的jni 目录，或者它的上级目录都行，选择 External Tools -> ndk-build 进行编译，就会发现在main/java/libs目录下生成了相应的so文件。
+这些配置完成后，就回自动生成 so 文件并打包在 apk 中。
 
 
 ### java native 方法和ogg 文件格式处理

@@ -2,5 +2,5 @@
 
 * [使用说明](README.md)
 * [Speex](speex.md)
-* [JNI](jni.md)
+* [JNI](https://github.com/YaowenGuo/AndroidQA/blob/master/Android/jni/jni.md)
 
